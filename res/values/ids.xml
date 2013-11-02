@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="id" name="menu_options" />
+    <item type="id" name="menu_coordinates" />
+    <item type="id" name="menu_time" />
+</resources>
