@@ -1,14 +1,14 @@
 package com.florianmski.SunPhases.ui.fragments;
 
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.*;
 import android.view.inputmethod.EditorInfo;
 import android.widget.*;
-import com.florianmski.SunPhases.*;
+import com.florianmski.SunPhases.R;
 import com.florianmski.SunPhases.utils.Palette;
 import com.florianmski.SunPhases.utils.SensorManager;
 import com.florianmski.SunPhases.utils.SunPhaseManager;
@@ -49,6 +49,26 @@ public class SunMapFragment extends SupportMapFragment implements SunPhaseManage
     public void onActivityCreated(Bundle savedInstanceState)
     {
         super.onActivityCreated(savedInstanceState);
+
+        // set the padding on the map at the right time so zoom button doesn't overlap seekBar
+        ViewTreeObserver vto = sb.getViewTreeObserver();
+        vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener()
+        {
+            @Override
+            public void onGlobalLayout()
+            {
+                ViewTreeObserver vto = sb.getViewTreeObserver();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN)
+                    vto.removeOnGlobalLayoutListener(this);
+                else
+                {
+                    //noinspection deprecation
+                    vto.removeGlobalOnLayoutListener(this);
+                }
+
+                getMap().setPadding(0, 0, 0, sb.getHeight());
+            }
+        });
 
         getMap().setOnMyLocationChangeListener(new GoogleMap.OnMyLocationChangeListener()
         {
@@ -99,11 +119,9 @@ public class SunMapFragment extends SupportMapFragment implements SunPhaseManage
             }
         });
 
-        getMap().setOnMapClickListener(new GoogleMap.OnMapClickListener()
-        {
+        getMap().setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
-            public void onMapClick(LatLng latLng)
-            {
+            public void onMapClick(LatLng latLng) {
                 updateUserPosition(latLng.latitude, latLng.longitude);
                 saveUserPosition();
             }
@@ -160,45 +178,18 @@ public class SunMapFragment extends SupportMapFragment implements SunPhaseManage
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
     {
-        return super.onCreateView(inflater, container, savedInstanceState);
-    }
+        View mapView = super.onCreateView(inflater, container, savedInstanceState);
 
-    @Override
-    public void onViewCreated(View view, Bundle savedInstanceState)
-    {
-        super.onViewCreated(view, savedInstanceState);
-
-        // Warning, this is an awful hacky stuff
-        // I did that because I wanted to be sure that the progress bar will be at the left of the location button
-        // This can potentially break if the google map lib is updated
-        ViewGroup vg1 = (ViewGroup)view; // only one view there
-        ViewGroup vg2 = (ViewGroup)vg1.getChildAt(0); // only one view there
-        ViewGroup vg3 = (ViewGroup)vg2.getChildAt(0); // two views there
-
-        // second one seems to be what we're looking for: ui controls
-        RelativeLayout uiSettings = ((RelativeLayout)vg3.getChildAt(1));
-
-//        uiSettings.getChildAt(0) // location button, id = 2
-//        uiSettings.getChildAt(1) // don't know what it is, id = 3
-//        uiSettings.getChildAt(2) // zoom buttons, id = 1
-        // where's the compass ????
-
-        // stupid seekbar bug http://stackoverflow.com/questions/7404100/how-to-fix-seekbar-bar-thumb-centering-issues
-        LayoutInflater inflater = (LayoutInflater) getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        sb = (SeekBar) inflater.inflate(R.layout.seek_bar, null);
-
-        View btnZoom = uiSettings.getChildAt(2);
-
+        sb = new SeekBar(inflater.getContext());
+        sb.setPadding(50, 0, 50, 20);
         RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.addRule(RelativeLayout.LEFT_OF, btnZoom.getId());
-        lp.addRule(RelativeLayout.ALIGN_TOP, btnZoom.getId());
-        lp.addRule(RelativeLayout.ALIGN_BOTTOM, btnZoom.getId());
+        lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
 
-        int btnLocationRightMargin = ((RelativeLayout.LayoutParams)btnZoom.getLayoutParams()).rightMargin;
-        lp.setMargins(btnLocationRightMargin, 0, btnLocationRightMargin, 0);
-        sb.setLayoutParams(lp);
+        RelativeLayout rl = new RelativeLayout(inflater.getContext());
+        rl.addView(mapView);
+        rl.addView(sb, lp);
 
-        uiSettings.addView(sb);
+        return rl;
     }
 
     @Override
